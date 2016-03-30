@@ -197,8 +197,10 @@ function wp_ajax_wp_compression_test() {
 			echo $out;
 			wp_die();
 		} elseif ( 'no' == $_GET['test'] ) {
+			check_ajax_referer( 'update_can_compress_scripts' );
 			update_site_option('can_compress_scripts', 0);
 		} elseif ( 'yes' == $_GET['test'] ) {
+			check_ajax_referer( 'update_can_compress_scripts' );
 			update_site_option('can_compress_scripts', 1);
 		}
 	}
@@ -2750,14 +2752,14 @@ function wp_ajax_get_revision_diffs() {
 	require ABSPATH . 'wp-admin/includes/revision.php';
 
 	if ( ! $post = get_post( (int) $_REQUEST['post_id'] ) )
-		wp_send_json_error();
+		wp_send_json_error(111);
 
 	if ( ! current_user_can( 'read_post', $post->ID ) )
-		wp_send_json_error();
+		wp_send_json_error(222);
 
 	// Really just pre-loading the cache here.
 	if ( ! $revisions = wp_get_post_revisions( $post->ID, array( 'check_enabled' => false ) ) )
-		wp_send_json_error();
+		wp_send_json_error(333);
 
 	$return = array();
 	@set_time_limit( 0 );
@@ -3307,6 +3309,8 @@ function wp_ajax_save_wporg_username() {
 	if ( ! current_user_can( 'install_themes' ) && ! current_user_can( 'install_plugins' ) ) {
 		wp_send_json_error();
 	}
+
+	check_ajax_referer( 'save_wporg_username_' . get_current_user_id() );
 
 	$username = isset( $_REQUEST['username'] ) ? wp_unslash( $_REQUEST['username'] ) : false;
 
