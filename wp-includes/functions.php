@@ -3188,4 +3188,1310 @@ function dead_db() {
 	// Otherwise, be terse.
 	status_header( 500 );
 	nocache_headers();
-	header( 'Content-Type: text/html; charset=utf-8'
+	header( 'Content-Type: text/html; charset=utf-8' );
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" <?php if ( function_exists( 'language_attributes' ) ) language_attributes(); ?>>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>Database Error</title>
+
+</head>
+<body>
+	<h1>Error establishing a database connection</h1>
+</body>
+</html>
+<?php
+	die();
+}
+
+/**
+ * Converts value to nonnegative integer.
+ *
+ * @since 2.5.0
+ *
+ * @param mixed $maybeint Data you wish to have convered to an nonnegative integer
+ * @return int An nonnegative integer
+ */
+function absint( $maybeint ) {
+	return abs( intval( $maybeint ) );
+}
+
+/**
+ * Determines if the blog can be accessed over SSL.
+ *
+ * Determines if blog can be accessed over SSL by using cURL to access the site
+ * using the https in the siteurl. Requires cURL extension to work correctly.
+ *
+ * @since 2.5.0
+ *
+ * @param string $url
+ * @return bool Whether SSL access is available
+ */
+function url_is_accessable_via_ssl($url)
+{
+	if (in_array('curl', get_loaded_extensions())) {
+		$ssl = preg_replace( '/^http:\/\//', 'https://',  $url );
+
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL, $ssl);
+		curl_setopt($ch, CURLOPT_FAILONERROR, true);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+
+		curl_exec($ch);
+
+		$status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close ($ch);
+
+		if ($status == 200 || $status == 401) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Secure URL, if available or the given URL.
+ *
+ * @since 2.5.0
+ *
+ * @param string $url Complete URL path with transport.
+ * @return string Secure or regular URL path.
+ */
+function atom_service_url_filter($url)
+{
+	if ( url_is_accessable_via_ssl($url) )
+		return preg_replace( '/^http:\/\//', 'https://',  $url );
+	else
+		return $url;
+}
+
+/**
+ * Marks a function as deprecated and informs when it has been used.
+ *
+ * There is a hook deprecated_function_run that will be called that can be used
+ * to get the backtrace up to what file and function called the deprecated
+ * function.
+ *
+ * The current behavior is to trigger a user error if WP_DEBUG is true.
+ *
+ * This function is to be used in every function that is deprecated.
+ *
+ * @package WordPress
+ * @subpackage Debug
+ * @since 2.5.0
+ * @access private
+ *
+ * @uses do_action() Calls 'deprecated_function_run' and passes the function name, what to use instead,
+ *   and the version the function was deprecated in.
+ * @uses apply_filters() Calls 'deprecated_function_trigger_error' and expects boolean value of true to do
+ *   trigger or false to not trigger error.
+ *
+ * @param string $function The function that was called
+ * @param string $version The version of WordPress that deprecated the function
+ * @param string $replacement Optional. The function that should have been called
+ */
+function _deprecated_function( $function, $version, $replacement=null ) {
+
+	do_action( 'deprecated_function_run', $function, $replacement, $version );
+
+	// Allow plugin to filter the output error trigger
+	if ( WP_DEBUG && apply_filters( 'deprecated_function_trigger_error', true ) ) {
+		if ( ! is_null($replacement) )
+			trigger_error( sprintf( __('%1$s is <strong>deprecated</strong> since version %2$s! Use %3$s instead.'), $function, $version, $replacement ) );
+		else
+			trigger_error( sprintf( __('%1$s is <strong>deprecated</strong> since version %2$s with no alternative available.'), $function, $version ) );
+	}
+}
+
+/**
+ * Marks a file as deprecated and informs when it has been used.
+ *
+ * There is a hook deprecated_file_included that will be called that can be used
+ * to get the backtrace up to what file and function included the deprecated
+ * file.
+ *
+ * The current behavior is to trigger a user error if WP_DEBUG is true.
+ *
+ * This function is to be used in every file that is deprecated.
+ *
+ * @package WordPress
+ * @subpackage Debug
+ * @since 2.5.0
+ * @access private
+ *
+ * @uses do_action() Calls 'deprecated_file_included' and passes the file name, what to use instead,
+ *   the version in which the file was deprecated, and any message regarding the change.
+ * @uses apply_filters() Calls 'deprecated_file_trigger_error' and expects boolean value of true to do
+ *   trigger or false to not trigger error.
+ *
+ * @param string $file The file that was included
+ * @param string $version The version of WordPress that deprecated the file
+ * @param string $replacement Optional. The file that should have been included based on ABSPATH
+ * @param string $message Optional. A message regarding the change
+ */
+function _deprecated_file( $file, $version, $replacement = null, $message = '' ) {
+
+	do_action( 'deprecated_file_included', $file, $replacement, $version, $message );
+
+	// Allow plugin to filter the output error trigger
+	if ( WP_DEBUG && apply_filters( 'deprecated_file_trigger_error', true ) ) {
+		$message = empty( $message ) ? '' : ' ' . $message;
+		if ( ! is_null( $replacement ) )
+			trigger_error( sprintf( __('%1$s is <strong>deprecated</strong> since version %2$s! Use %3$s instead.'), $file, $version, $replacement ) . $message );
+		else
+			trigger_error( sprintf( __('%1$s is <strong>deprecated</strong> since version %2$s with no alternative available.'), $file, $version ) . $message );
+	}
+}
+/**
+ * Marks a function argument as deprecated and informs when it has been used.
+ *
+ * This function is to be used whenever a deprecated function argument is used.
+ * Before this function is called, the argument must be checked for whether it was
+ * used by comparing it to its default value or evaluating whether it is empty.
+ * For example:
+ * <code>
+ * if ( !empty($deprecated) )
+ * 	_deprecated_argument( __FUNCTION__, '3.0' );
+ * </code>
+ *
+ * There is a hook deprecated_argument_run that will be called that can be used
+ * to get the backtrace up to what file and function used the deprecated
+ * argument.
+ *
+ * The current behavior is to trigger a user error if WP_DEBUG is true.
+ *
+ * @package WordPress
+ * @subpackage Debug
+ * @since 3.0.0
+ * @access private
+ *
+ * @uses do_action() Calls 'deprecated_argument_run' and passes the function name, a message on the change,
+ *   and the version in which the argument was deprecated.
+ * @uses apply_filters() Calls 'deprecated_argument_trigger_error' and expects boolean value of true to do
+ *   trigger or false to not trigger error.
+ *
+ * @param string $function The function that was called
+ * @param string $version The version of WordPress that deprecated the argument used
+ * @param string $message Optional. A message regarding the change.
+ */
+function _deprecated_argument( $function, $version, $message = null ) {
+
+	do_action( 'deprecated_argument_run', $function, $message, $version );
+
+	// Allow plugin to filter the output error trigger
+	if ( WP_DEBUG && apply_filters( 'deprecated_argument_trigger_error', true ) ) {
+		if ( ! is_null( $message ) )
+			trigger_error( sprintf( __('%1$s was called with an argument that is <strong>deprecated</strong> since version %2$s! %3$s'), $function, $version, $message ) );
+		else
+			trigger_error( sprintf( __('%1$s was called with an argument that is <strong>deprecated</strong> since version %2$s with no alternative available.'), $function, $version ) );
+	}
+}
+
+/**
+ * Marks something as being incorrectly called.
+ *
+ * There is a hook doing_it_wrong_run that will be called that can be used
+ * to get the backtrace up to what file and function called the deprecated
+ * function.
+ *
+ * The current behavior is to trigger a user error if WP_DEBUG is true.
+ *
+ * @package WordPress
+ * @subpackage Debug
+ * @since 3.1.0
+ * @access private
+ *
+ * @uses do_action() Calls 'doing_it_wrong_run' and passes the function arguments.
+ * @uses apply_filters() Calls 'doing_it_wrong_trigger_error' and expects boolean value of true to do
+ *   trigger or false to not trigger error.
+ *
+ * @param string $function The function that was called.
+ * @param string $message A message explaining what has been done incorrectly.
+ * @param string $version The version of WordPress where the message was added.
+ */
+function _doing_it_wrong( $function, $message, $version ) {
+
+	do_action( 'doing_it_wrong_run', $function, $message, $version );
+
+	// Allow plugin to filter the output error trigger
+	if ( WP_DEBUG && apply_filters( 'doing_it_wrong_trigger_error', true ) ) {
+		$version = is_null( $version ) ? '' : sprintf( __( '(This message was added in version %s.)' ), $version );
+		trigger_error( sprintf( __( '%1$s was called <strong>incorrectly</strong>. %2$s %3$s' ), $function, $message, $version ) );
+	}
+}
+
+/**
+ * Is the server running earlier than 1.5.0 version of lighttpd
+ *
+ * @since 2.5.0
+ *
+ * @return bool Whether the server is running lighttpd < 1.5.0
+ */
+function is_lighttpd_before_150() {
+	$server_parts = explode( '/', isset( $_SERVER['SERVER_SOFTWARE'] )? $_SERVER['SERVER_SOFTWARE'] : '' );
+	$server_parts[1] = isset( $server_parts[1] )? $server_parts[1] : '';
+	return  'lighttpd' == $server_parts[0] && -1 == version_compare( $server_parts[1], '1.5.0' );
+}
+
+/**
+ * Does the specified module exist in the apache config?
+ *
+ * @since 2.5.0
+ *
+ * @param string $mod e.g. mod_rewrite
+ * @param bool $default The default return value if the module is not found
+ * @return bool
+ */
+function apache_mod_loaded($mod, $default = false) {
+	global $is_apache;
+
+	if ( !$is_apache )
+		return false;
+
+	if ( function_exists('apache_get_modules') ) {
+		$mods = apache_get_modules();
+		if ( in_array($mod, $mods) )
+			return true;
+	} elseif ( function_exists('phpinfo') ) {
+			ob_start();
+			phpinfo(8);
+			$phpinfo = ob_get_clean();
+			if ( false !== strpos($phpinfo, $mod) )
+				return true;
+	}
+	return $default;
+}
+
+/**
+ * Check if IIS 7 supports pretty permalinks
+ *
+ * @since 2.8.0
+ *
+ * @return bool
+ */
+function iis7_supports_permalinks() {
+	global $is_iis7;
+
+	$supports_permalinks = false;
+	if ( $is_iis7 ) {
+		/* First we check if the DOMDocument class exists. If it does not exist,
+		 * which is the case for PHP 4.X, then we cannot easily update the xml configuration file,
+		 * hence we just bail out and tell user that pretty permalinks cannot be used.
+		 * This is not a big issue because PHP 4.X is going to be depricated and for IIS it
+		 * is recommended to use PHP 5.X NTS.
+		 * Next we check if the URL Rewrite Module 1.1 is loaded and enabled for the web site. When
+		 * URL Rewrite 1.1 is loaded it always sets a server variable called 'IIS_UrlRewriteModule'.
+		 * Lastly we make sure that PHP is running via FastCGI. This is important because if it runs
+		 * via ISAPI then pretty permalinks will not work.
+		 */
+		$supports_permalinks = class_exists('DOMDocument') && isset($_SERVER['IIS_UrlRewriteModule']) && ( php_sapi_name() == 'cgi-fcgi' );
+	}
+
+	return apply_filters('iis7_supports_permalinks', $supports_permalinks);
+}
+
+/**
+ * File validates against allowed set of defined rules.
+ *
+ * A return value of '1' means that the $file contains either '..' or './'. A
+ * return value of '2' means that the $file contains ':' after the first
+ * character. A return value of '3' means that the file is not in the allowed
+ * files list.
+ *
+ * @since 1.2.0
+ *
+ * @param string $file File path.
+ * @param array $allowed_files List of allowed files.
+ * @return int 0 means nothing is wrong, greater than 0 means something was wrong.
+ */
+function validate_file( $file, $allowed_files = '' ) {
+	if ( false !== strpos( $file, '..' ))
+		return 1;
+
+	if ( false !== strpos( $file, './' ))
+		return 1;
+
+	if (!empty ( $allowed_files ) && (!in_array( $file, $allowed_files ) ) )
+		return 3;
+
+	if (':' == substr( $file, 1, 1 ))
+		return 2;
+
+	return 0;
+}
+
+/**
+ * Determine if SSL is used.
+ *
+ * @since 2.6.0
+ *
+ * @return bool True if SSL, false if not used.
+ */
+function is_ssl() {
+	if ( isset($_SERVER['HTTPS']) ) {
+		if ( 'on' == strtolower($_SERVER['HTTPS']) )
+			return true;
+		if ( '1' == $_SERVER['HTTPS'] )
+			return true;
+	} elseif ( isset($_SERVER['SERVER_PORT']) && ( '443' == $_SERVER['SERVER_PORT'] ) ) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Whether SSL login should be forced.
+ *
+ * @since 2.6.0
+ *
+ * @param string|bool $force Optional.
+ * @return bool True if forced, false if not forced.
+ */
+function force_ssl_login( $force = null ) {
+	static $forced = false;
+
+	if ( !is_null( $force ) ) {
+		$old_forced = $forced;
+		$forced = $force;
+		return $old_forced;
+	}
+
+	return $forced;
+}
+
+/**
+ * Whether to force SSL used for the Administration Panels.
+ *
+ * @since 2.6.0
+ *
+ * @param string|bool $force
+ * @return bool True if forced, false if not forced.
+ */
+function force_ssl_admin( $force = null ) {
+	static $forced = false;
+
+	if ( !is_null( $force ) ) {
+		$old_forced = $forced;
+		$forced = $force;
+		return $old_forced;
+	}
+
+	return $forced;
+}
+
+/**
+ * Guess the URL for the site.
+ *
+ * Will remove wp-admin links to retrieve only return URLs not in the wp-admin
+ * directory.
+ *
+ * @since 2.6.0
+ *
+ * @return string
+ */
+function wp_guess_url() {
+	if ( defined('WP_SITEURL') && '' != WP_SITEURL ) {
+		$url = WP_SITEURL;
+	} else {
+		$schema = is_ssl() ? 'https://' : 'http://';
+		$url = preg_replace('|/wp-admin/.*|i', '', $schema . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
+	}
+	return rtrim($url, '/');
+}
+
+/**
+ * Suspend cache invalidation.
+ *
+ * Turns cache invalidation on and off.  Useful during imports where you don't wont to do invalidations
+ * every time a post is inserted.  Callers must be sure that what they are doing won't lead to an inconsistent
+ * cache when invalidation is suspended.
+ *
+ * @since 2.7.0
+ *
+ * @param bool $suspend Whether to suspend or enable cache invalidation
+ * @return bool The current suspend setting
+ */
+function wp_suspend_cache_invalidation($suspend = true) {
+	global $_wp_suspend_cache_invalidation;
+
+	$current_suspend = $_wp_suspend_cache_invalidation;
+	$_wp_suspend_cache_invalidation = $suspend;
+	return $current_suspend;
+}
+
+/**
+ * Retrieve site option value based on name of option.
+ *
+ * @see get_option()
+ * @package WordPress
+ * @subpackage Option
+ * @since 2.8.0
+ *
+ * @uses apply_filters() Calls 'pre_site_option_$option' before checking the option.
+ * 	Any value other than false will "short-circuit" the retrieval of the option
+ *	and return the returned value.
+ * @uses apply_filters() Calls 'site_option_$option', after checking the  option, with
+ * 	the option value.
+ *
+ * @param string $option Name of option to retrieve. Expected to not be SQL-escaped.
+ * @param mixed $default Optional value to return if option doesn't exist. Default false.
+ * @param bool $use_cache Whether to use cache. Multisite only. Default true.
+ * @return mixed Value set for the option.
+ */
+function get_site_option( $option, $default = false, $use_cache = true ) {
+	global $wpdb;
+
+	// Allow plugins to short-circuit site options.
+ 	$pre = apply_filters( 'pre_site_option_' . $option, false );
+ 	if ( false !== $pre )
+ 		return $pre;
+
+	if ( !is_multisite() ) {
+		$value = get_option($option, $default);
+	} else {
+		$cache_key = "{$wpdb->siteid}:$option";
+		if ( $use_cache )
+			$value = wp_cache_get($cache_key, 'site-options');
+
+		if ( !isset($value) || (false === $value) ) {
+			$row = $wpdb->get_row( $wpdb->prepare("SELECT meta_value FROM $wpdb->sitemeta WHERE meta_key = %s AND site_id = %d", $option, $wpdb->siteid ) );
+
+			// Has to be get_row instead of get_var because of funkiness with 0, false, null values
+			if ( is_object( $row ) )
+				$value = $row->meta_value;
+			else
+				$value = $default;
+
+			$value = maybe_unserialize( $value );
+
+			wp_cache_set( $cache_key, $value, 'site-options' );
+		}
+	}
+
+ 	return apply_filters( 'site_option_' . $option, $value );
+}
+
+/**
+ * Add a new site option.
+ *
+ * @see add_option()
+ * @package WordPress
+ * @subpackage Option
+ * @since 2.8.0
+ *
+ * @uses apply_filters() Calls 'pre_add_site_option_$option' hook to allow overwriting the
+ * 	option value to be stored.
+ * @uses do_action() Calls 'add_site_option_$option' and 'add_site_option' hooks on success.
+ *
+ * @param string $option Name of option to add. Expected to not be SQL-escaped.
+ * @param mixed $value Optional. Option value, can be anything. Expected to not be SQL-escaped.
+ * @return bool False if option was not added and true if option was added.
+ */
+function add_site_option( $option, $value ) {
+	global $wpdb;
+
+	$value = apply_filters( 'pre_add_site_option_' . $option, $value );
+
+	if ( !is_multisite() ) {
+		$result = add_option( $option, $value );
+	} else {
+		$cache_key = "{$wpdb->siteid}:$option";
+
+		if ( $wpdb->get_row( $wpdb->prepare( "SELECT meta_value FROM $wpdb->sitemeta WHERE meta_key = %s AND site_id = %d", $option, $wpdb->siteid ) ) )
+			return update_site_option( $option, $value );
+
+		$value = sanitize_option( $option, $value );
+		wp_cache_set( $cache_key, $value, 'site-options' );
+
+		$_value = $value;
+		$value = maybe_serialize($value);
+		$result = $wpdb->insert( $wpdb->sitemeta, array('site_id' => $wpdb->siteid, 'meta_key' => $option, 'meta_value' => $value ) );
+		$value = $_value;
+	}
+
+	do_action( "add_site_option_{$option}", $option, $value );
+	do_action( "add_site_option", $option, $value );
+
+	return $result;
+}
+
+/**
+ * Removes site option by name.
+ *
+ * @see delete_option()
+ * @package WordPress
+ * @subpackage Option
+ * @since 2.8.0
+ *
+ * @uses do_action() Calls 'pre_delete_site_option_$option' hook before option is deleted.
+ * @uses do_action() Calls 'delete_site_option' and 'delete_site_option_$option'
+ * 	hooks on success.
+ *
+ * @param string $option Name of option to remove. Expected to not be SQL-escaped.
+ * @return bool True, if succeed. False, if failure.
+ */
+function delete_site_option( $option ) {
+	global $wpdb;
+
+	// ms_protect_special_option( $option ); @todo
+
+	do_action( 'pre_delete_site_option_' . $option );
+
+	if ( !is_multisite() ) {
+		$result = delete_option( $option );
+	} else {
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT meta_id FROM {$wpdb->sitemeta} WHERE meta_key = %s AND site_id = %d", $option, $wpdb->siteid ) );
+		if ( is_null( $row ) || !$row->meta_id )
+			return false;
+		$cache_key = "{$wpdb->siteid}:$option";
+		wp_cache_delete( $cache_key, 'site-options' );
+
+		$result = $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->sitemeta} WHERE meta_key = %s AND site_id = %d", $option, $wpdb->siteid ) );
+	}
+
+	if ( $result ) {
+		do_action( "delete_site_option_{$option}", $option );
+		do_action( "delete_site_option", $option );
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Update the value of a site option that was already added.
+ *
+ * @see update_option()
+ * @since 2.8.0
+ * @package WordPress
+ * @subpackage Option
+ *
+ * @uses apply_filters() Calls 'pre_update_site_option_$option' hook to allow overwriting the
+ * 	option value to be stored.
+ * @uses do_action() Calls 'update_site_option_$option' and 'update_site_option' hooks on success.
+ *
+ * @param string $option Name of option. Expected to not be SQL-escaped.
+ * @param mixed $value Option value. Expected to not be SQL-escaped.
+ * @return bool False if value was not updated and true if value was updated.
+ */
+function update_site_option( $option, $value ) {
+	global $wpdb;
+
+	$oldvalue = get_site_option( $option );
+	$value = apply_filters( 'pre_update_site_option_' . $option, $value, $oldvalue );
+
+	if ( $value === $oldvalue )
+		return false;
+
+	if ( !is_multisite() ) {
+		$result = update_option( $option, $value );
+	} else {
+		$cache_key = "{$wpdb->siteid}:$option";
+
+		if ( $value && !$wpdb->get_row( $wpdb->prepare( "SELECT meta_value FROM $wpdb->sitemeta WHERE meta_key = %s AND site_id = %d", $option, $wpdb->siteid ) ) )
+			return add_site_option( $option, $value );
+		$value = sanitize_option( $option, $value );
+		wp_cache_set( $cache_key, $value, 'site-options' );
+
+		$_value = $value;
+		$value = maybe_serialize( $value );
+		$result = $wpdb->update( $wpdb->sitemeta, array( 'meta_value' => $value ), array( 'site_id' => $wpdb->siteid, 'meta_key' => $option ) );
+		$value = $_value;
+	}
+
+	if ( $result ) {
+		do_action( "update_site_option_{$option}", $option, $value );
+		do_action( "update_site_option", $option, $value );
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Delete a site transient
+ *
+ * @since 2.9.0
+ * @package WordPress
+ * @subpackage Transient
+ *
+ * @uses do_action() Calls 'delete_site_transient_$transient' hook before transient is deleted.
+ * @uses do_action() Calls 'deleted_site_transient' hook on success.
+ *
+ * @param string $transient Transient name. Expected to not be SQL-escaped.
+ * @return bool True if successful, false otherwise
+ */
+function delete_site_transient( $transient ) {
+	global $_wp_using_ext_object_cache;
+
+	do_action( 'delete_site_transient_' . $transient, $transient );
+	if ( $_wp_using_ext_object_cache ) {
+		$result = wp_cache_delete( $transient, 'site-transient' );
+	} else {
+		$option_timeout = '_site_transient_timeout_' . $transient;
+		$option = '_site_transient_' . $transient;
+		$result = delete_site_option( $option );
+		if ( $result )
+			delete_site_option( $option_timeout );
+	}
+	if ( $result )
+		do_action( 'deleted_site_transient', $transient );
+	return $result;
+}
+
+/**
+ * Get the value of a site transient
+ *
+ * If the transient does not exist or does not have a value, then the return value
+ * will be false.
+ *
+ * @see get_transient()
+ * @since 2.9.0
+ * @package WordPress
+ * @subpackage Transient
+ *
+ * @uses apply_filters() Calls 'pre_site_transient_$transient' hook before checking the transient.
+ * 	Any value other than false will "short-circuit" the retrieval of the transient
+ *	and return the returned value.
+ * @uses apply_filters() Calls 'site_transient_$option' hook, after checking the transient, with
+ * 	the transient value.
+ *
+ * @param string $transient Transient name. Expected to not be SQL-escaped.
+ * @return mixed Value of transient
+ */
+function get_site_transient( $transient ) {
+	global $_wp_using_ext_object_cache;
+
+	$pre = apply_filters( 'pre_site_transient_' . $transient, false );
+	if ( false !== $pre )
+		return $pre;
+
+	if ( $_wp_using_ext_object_cache ) {
+		$value = wp_cache_get( $transient, 'site-transient' );
+	} else {
+		// Core transients that do not have a timeout. Listed here so querying timeouts can be avoided.
+		$no_timeout = array('update_core', 'update_plugins', 'update_themes');
+		$transient_option = '_site_transient_' . $transient;
+		if ( ! in_array( $transient, $no_timeout ) ) {
+			$transient_timeout = '_site_transient_timeout_' . $transient;
+			$timeout = get_site_option( $transient_timeout );
+			if ( false !== $timeout && $timeout < time() ) {
+				delete_site_option( $transient_option  );
+				delete_site_option( $transient_timeout );
+				return false;
+			}
+		}
+
+		$value = get_site_option( $transient_option );
+	}
+
+	return apply_filters( 'site_transient_' . $transient, $value );
+}
+
+/**
+ * Set/update the value of a site transient
+ *
+ * You do not need to serialize values, if the value needs to be serialize, then
+ * it will be serialized before it is set.
+ *
+ * @see set_transient()
+ * @since 2.9.0
+ * @package WordPress
+ * @subpackage Transient
+ *
+ * @uses apply_filters() Calls 'pre_set_site_transient_$transient' hook to allow overwriting the
+ * 	transient value to be stored.
+ * @uses do_action() Calls 'set_site_transient_$transient' and 'setted_site_transient' hooks on success.
+ *
+ * @param string $transient Transient name. Expected to not be SQL-escaped.
+ * @param mixed $value Transient value. Expected to not be SQL-escaped.
+ * @param int $expiration Time until expiration in seconds, default 0
+ * @return bool False if value was not set and true if value was set.
+ */
+function set_site_transient( $transient, $value, $expiration = 0 ) {
+	global $_wp_using_ext_object_cache;
+
+	$value = apply_filters( 'pre_set_site_transient_' . $transient, $value );
+
+	if ( $_wp_using_ext_object_cache ) {
+		$result = wp_cache_set( $transient, $value, 'site-transient', $expiration );
+	} else {
+		$transient_timeout = '_site_transient_timeout_' . $transient;
+		$transient = '_site_transient_' . $transient;
+		if ( false === get_site_option( $transient ) ) {
+			if ( $expiration )
+				add_site_option( $transient_timeout, time() + $expiration );
+			$result = add_site_option( $transient, $value );
+		} else {
+			if ( $expiration )
+				update_site_option( $transient_timeout, time() + $expiration );
+			$result = update_site_option( $transient, $value );
+		}
+	}
+	if ( $result ) {
+		do_action( 'set_site_transient_' . $transient );
+		do_action( 'setted_site_transient', $transient );
+	}
+	return $result;
+}
+
+/**
+ * is main site
+ *
+ *
+ * @since 3.0.0
+ * @package WordPress
+ *
+ * @param int $blog_id optional blog id to test (default current blog)
+ * @return bool True if not multisite or $blog_id is main site
+ */
+function is_main_site( $blog_id = '' ) {
+	global $current_site, $current_blog;
+
+	if ( !is_multisite() )
+		return true;
+
+	if ( !$blog_id )
+		$blog_id = $current_blog->blog_id;
+
+	return $blog_id == $current_site->blog_id;
+}
+
+/**
+ * Whether global terms are enabled.
+ *
+ *
+ * @since 3.0.0
+ * @package WordPress
+ *
+ * @return bool True if multisite and global terms enabled
+ */
+function global_terms_enabled() {
+	if ( ! is_multisite() )
+		return false;
+
+	static $global_terms = null;
+	if ( is_null( $global_terms ) ) {
+		$filter = apply_filters( 'global_terms_enabled', null );
+		if ( ! is_null( $filter ) )
+			$global_terms = (bool) $filter;
+		else
+			$global_terms = (bool) get_site_option( 'global_terms_enabled', false );
+	}
+	return $global_terms;
+}
+
+/**
+ * gmt_offset modification for smart timezone handling
+ *
+ * Overrides the gmt_offset option if we have a timezone_string available
+ *
+ * @since 2.8.0
+ *
+ * @return float|bool
+ */
+function wp_timezone_override_offset() {
+	if ( !wp_timezone_supported() ) {
+		return false;
+	}
+	if ( !$timezone_string = get_option( 'timezone_string' ) ) {
+		return false;
+	}
+
+	$timezone_object = timezone_open( $timezone_string );
+	$datetime_object = date_create();
+	if ( false === $timezone_object || false === $datetime_object ) {
+		return false;
+	}
+	return round( timezone_offset_get( $timezone_object, $datetime_object ) / 3600, 2 );
+}
+
+/**
+ * Check for PHP timezone support
+ *
+ * @since 2.9.0
+ *
+ * @return bool
+ */
+function wp_timezone_supported() {
+	$support = false;
+	if (
+		function_exists( 'date_create' ) &&
+		function_exists( 'date_default_timezone_set' ) &&
+		function_exists( 'timezone_identifiers_list' ) &&
+		function_exists( 'timezone_open' ) &&
+		function_exists( 'timezone_offset_get' )
+	) {
+		$support = true;
+	}
+	return apply_filters( 'timezone_support', $support );
+}
+
+/**
+ * {@internal Missing Short Description}}
+ *
+ * @since 2.9.0
+ *
+ * @param unknown_type $a
+ * @param unknown_type $b
+ * @return int
+ */
+function _wp_timezone_choice_usort_callback( $a, $b ) {
+	// Don't use translated versions of Etc
+	if ( 'Etc' === $a['continent'] && 'Etc' === $b['continent'] ) {
+		// Make the order of these more like the old dropdown
+		if ( 'GMT+' === substr( $a['city'], 0, 4 ) && 'GMT+' === substr( $b['city'], 0, 4 ) ) {
+			return -1 * ( strnatcasecmp( $a['city'], $b['city'] ) );
+		}
+		if ( 'UTC' === $a['city'] ) {
+			if ( 'GMT+' === substr( $b['city'], 0, 4 ) ) {
+				return 1;
+			}
+			return -1;
+		}
+		if ( 'UTC' === $b['city'] ) {
+			if ( 'GMT+' === substr( $a['city'], 0, 4 ) ) {
+				return -1;
+			}
+			return 1;
+		}
+		return strnatcasecmp( $a['city'], $b['city'] );
+	}
+	if ( $a['t_continent'] == $b['t_continent'] ) {
+		if ( $a['t_city'] == $b['t_city'] ) {
+			return strnatcasecmp( $a['t_subcity'], $b['t_subcity'] );
+		}
+		return strnatcasecmp( $a['t_city'], $b['t_city'] );
+	} else {
+		// Force Etc to the bottom of the list
+		if ( 'Etc' === $a['continent'] ) {
+			return 1;
+		}
+		if ( 'Etc' === $b['continent'] ) {
+			return -1;
+		}
+		return strnatcasecmp( $a['t_continent'], $b['t_continent'] );
+	}
+}
+
+/**
+ * Gives a nicely formatted list of timezone strings // temporary! Not in final
+ *
+ * @since 2.9.0
+ *
+ * @param string $selected_zone Selected Zone
+ * @return string
+ */
+function wp_timezone_choice( $selected_zone ) {
+	static $mo_loaded = false;
+
+	$continents = array( 'Africa', 'America', 'Antarctica', 'Arctic', 'Asia', 'Atlantic', 'Australia', 'Europe', 'Indian', 'Pacific');
+
+	// Load translations for continents and cities
+	if ( !$mo_loaded ) {
+		$locale = get_locale();
+		$mofile = WP_LANG_DIR . '/continents-cities-' . $locale . '.mo';
+		load_textdomain( 'continents-cities', $mofile );
+		$mo_loaded = true;
+	}
+
+	$zonen = array();
+	foreach ( timezone_identifiers_list() as $zone ) {
+		$zone = explode( '/', $zone );
+		if ( !in_array( $zone[0], $continents ) ) {
+			continue;
+		}
+
+		// This determines what gets set and translated - we don't translate Etc/* strings here, they are done later
+		$exists = array(
+			0 => ( isset( $zone[0] ) && $zone[0] ),
+			1 => ( isset( $zone[1] ) && $zone[1] ),
+			2 => ( isset( $zone[2] ) && $zone[2] ),
+		);
+		$exists[3] = ( $exists[0] && 'Etc' !== $zone[0] );
+		$exists[4] = ( $exists[1] && $exists[3] );
+		$exists[5] = ( $exists[2] && $exists[3] );
+
+		$zonen[] = array(
+			'continent'   => ( $exists[0] ? $zone[0] : '' ),
+			'city'        => ( $exists[1] ? $zone[1] : '' ),
+			'subcity'     => ( $exists[2] ? $zone[2] : '' ),
+			't_continent' => ( $exists[3] ? translate( str_replace( '_', ' ', $zone[0] ), 'continents-cities' ) : '' ),
+			't_city'      => ( $exists[4] ? translate( str_replace( '_', ' ', $zone[1] ), 'continents-cities' ) : '' ),
+			't_subcity'   => ( $exists[5] ? translate( str_replace( '_', ' ', $zone[2] ), 'continents-cities' ) : '' )
+		);
+	}
+	usort( $zonen, '_wp_timezone_choice_usort_callback' );
+
+	$structure = array();
+
+	if ( empty( $selected_zone ) ) {
+		$structure[] = '<option selected="selected" value="">' . __( 'Select a city' ) . '</option>';
+	}
+
+	foreach ( $zonen as $key => $zone ) {
+		// Build value in an array to join later
+		$value = array( $zone['continent'] );
+
+		if ( empty( $zone['city'] ) ) {
+			// It's at the continent level (generally won't happen)
+			$display = $zone['t_continent'];
+		} else {
+			// It's inside a continent group
+
+			// Continent optgroup
+			if ( !isset( $zonen[$key - 1] ) || $zonen[$key - 1]['continent'] !== $zone['continent'] ) {
+				$label = $zone['t_continent'];
+				$structure[] = '<optgroup label="'. esc_attr( $label ) .'">';
+			}
+
+			// Add the city to the value
+			$value[] = $zone['city'];
+
+			$display = $zone['t_city'];
+			if ( !empty( $zone['subcity'] ) ) {
+				// Add the subcity to the value
+				$value[] = $zone['subcity'];
+				$display .= ' - ' . $zone['t_subcity'];
+			}
+		}
+
+		// Build the value
+		$value = join( '/', $value );
+		$selected = '';
+		if ( $value === $selected_zone ) {
+			$selected = 'selected="selected" ';
+		}
+		$structure[] = '<option ' . $selected . 'value="' . esc_attr( $value ) . '">' . esc_html( $display ) . "</option>";
+
+		// Close continent optgroup
+		if ( !empty( $zone['city'] ) && ( !isset($zonen[$key + 1]) || (isset( $zonen[$key + 1] ) && $zonen[$key + 1]['continent'] !== $zone['continent']) ) ) {
+			$structure[] = '</optgroup>';
+		}
+	}
+
+	// Do UTC
+	$structure[] = '<optgroup label="'. esc_attr__( 'UTC' ) .'">';
+	$selected = '';
+	if ( 'UTC' === $selected_zone )
+		$selected = 'selected="selected" ';
+	$structure[] = '<option ' . $selected . 'value="' . esc_attr( 'UTC' ) . '">' . __('UTC') . '</option>';
+	$structure[] = '</optgroup>';
+
+	// Do manual UTC offsets
+	$structure[] = '<optgroup label="'. esc_attr__( 'Manual Offsets' ) .'">';
+	$offset_range = array (-12, -11.5, -11, -10.5, -10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5,
+		0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 5.75, 6, 6.5, 7, 7.5, 8, 8.5, 8.75, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.75, 13, 13.75, 14);
+	foreach ( $offset_range as $offset ) {
+		if ( 0 <= $offset )
+			$offset_name = '+' . $offset;
+		else
+			$offset_name = (string) $offset;
+
+		$offset_value = $offset_name;
+		$offset_name = str_replace(array('.25','.5','.75'), array(':15',':30',':45'), $offset_name);
+		$offset_name = 'UTC' . $offset_name;
+		$offset_value = 'UTC' . $offset_value;
+		$selected = '';
+		if ( $offset_value === $selected_zone )
+			$selected = 'selected="selected" ';
+		$structure[] = '<option ' . $selected . 'value="' . esc_attr( $offset_value ) . '">' . esc_html( $offset_name ) . "</option>";
+
+	}
+	$structure[] = '</optgroup>';
+
+	return join( "\n", $structure );
+}
+
+/**
+ * Strip close comment and close php tags from file headers used by WP
+ * See http://core.trac.wordpress.org/ticket/8497
+ *
+ * @since 2.8.0
+ *
+ * @param string $str
+ * @return string
+ */
+function _cleanup_header_comment($str) {
+	return trim(preg_replace("/\s*(?:\*\/|\?>).*/", '', $str));
+}
+
+/**
+ * Permanently deletes posts, pages, attachments, and comments which have been in the trash for EMPTY_TRASH_DAYS.
+ *
+ * @since 2.9.0
+ */
+function wp_scheduled_delete() {
+	global $wpdb;
+
+	$delete_timestamp = time() - (60*60*24*EMPTY_TRASH_DAYS);
+
+	$posts_to_delete = $wpdb->get_results($wpdb->prepare("SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_wp_trash_meta_time' AND meta_value < '%d'", $delete_timestamp), ARRAY_A);
+
+	foreach ( (array) $posts_to_delete as $post ) {
+		$post_id = (int) $post['post_id'];
+		if ( !$post_id )
+			continue;
+
+		$del_post = get_post($post_id);
+
+		if ( !$del_post || 'trash' != $del_post->post_status ) {
+			delete_post_meta($post_id, '_wp_trash_meta_status');
+			delete_post_meta($post_id, '_wp_trash_meta_time');
+		} else {
+			wp_delete_post($post_id);
+		}
+	}
+
+	$comments_to_delete = $wpdb->get_results($wpdb->prepare("SELECT comment_id FROM $wpdb->commentmeta WHERE meta_key = '_wp_trash_meta_time' AND meta_value < '%d'", $delete_timestamp), ARRAY_A);
+
+	foreach ( (array) $comments_to_delete as $comment ) {
+		$comment_id = (int) $comment['comment_id'];
+		if ( !$comment_id )
+			continue;
+
+		$del_comment = get_comment($comment_id);
+
+		if ( !$del_comment || 'trash' != $del_comment->comment_approved ) {
+			delete_comment_meta($comment_id, '_wp_trash_meta_time');
+			delete_comment_meta($comment_id, '_wp_trash_meta_status');
+		} else {
+			wp_delete_comment($comment_id);
+		}
+	}
+}
+
+/**
+ * Retrieve metadata from a file.
+ *
+ * Searches for metadata in the first 8kiB of a file, such as a plugin or theme.
+ * Each piece of metadata must be on its own line. Fields can not span multple
+ * lines, the value will get cut at the end of the first line.
+ *
+ * If the file data is not within that first 8kiB, then the author should correct
+ * their plugin file and move the data headers to the top.
+ *
+ * @see http://codex.wordpress.org/File_Header
+ *
+ * @since 2.9.0
+ * @param string $file Path to the file
+ * @param array $default_headers List of headers, in the format array('HeaderKey' => 'Header Name')
+ * @param string $context If specified adds filter hook "extra_{$context}_headers"
+ */
+function get_file_data( $file, $default_headers, $context = '' ) {
+	// We don't need to write to the file, so just open for reading.
+	$fp = fopen( $file, 'r' );
+
+	// Pull only the first 8kiB of the file in.
+	$file_data = fread( $fp, 8192 );
+
+	// PHP will close file handle, but we are good citizens.
+	fclose( $fp );
+
+	if ( $context != '' ) {
+		$extra_headers = apply_filters( "extra_{$context}_headers", array() );
+
+		$extra_headers = array_flip( $extra_headers );
+		foreach( $extra_headers as $key=>$value ) {
+			$extra_headers[$key] = $key;
+		}
+		$all_headers = array_merge( $extra_headers, (array) $default_headers );
+	} else {
+		$all_headers = $default_headers;
+	}
+
+	foreach ( $all_headers as $field => $regex ) {
+		preg_match( '/^[ \t\/*#@]*' . preg_quote( $regex, '/' ) . ':(.*)$/mi', $file_data, ${$field});
+		if ( !empty( ${$field} ) )
+			${$field} = _cleanup_header_comment( ${$field}[1] );
+		else
+			${$field} = '';
+	}
+
+	$file_data = compact( array_keys( $all_headers ) );
+
+	return $file_data;
+}
+
+/**
+ * Used internally to tidy up the search terms
+ *
+ * @access private
+ * @since 2.9.0
+ *
+ * @param string $t
+ * @return string
+ */
+function _search_terms_tidy($t) {
+	return trim($t, "\"'\n\r ");
+}
+
+/**
+ * Returns true
+ *
+ * Useful for returning true to filters easily
+ *
+ * @since 3.0.0
+ * @see __return_false()
+ * @return bool true
+ */
+function __return_true() {
+	return true;
+}
+
+/**
+ * Returns false
+ *
+ * Useful for returning false to filters easily
+ *
+ * @since 3.0.0
+ * @see __return_true()
+ * @return bool false
+ */
+function __return_false() {
+	return false;
+}
+
+/**
+ * Returns 0
+ *
+ * Useful for returning 0 to filters easily
+ *
+ * @since 3.0.0
+ * @see __return_zero()
+ * @return int 0
+ */
+function __return_zero() {
+	return 0;
+}
+
+/**
+ * Returns an empty array
+ *
+ * Useful for returning an empty array to filters easily
+ *
+ * @since 3.0.0
+ * @see __return_zero()
+ * @return array Empty array
+ */
+function __return_empty_array() {
+	return array();
+}
+
+/**
+ * Send a HTTP header to disable content type sniffing in browsers which support it.
+ *
+ * @link http://blogs.msdn.com/ie/archive/2008/07/02/ie8-security-part-v-comprehensive-protection.aspx
+ * @link http://src.chromium.org/viewvc/chrome?view=rev&revision=6985
+ *
+ * @since 3.0.0
+ * @return none
+ */
+function send_nosniff_header() {
+	@header( 'X-Content-Type-Options: nosniff' );
+}
+
+/**
+ * Returns a MySQL expression for selecting the week number based on the start_of_week option.
+ *
+ * @internal
+ * @since 3.0.0
+ * @param string $column
+ * @return string
+ */
+function _wp_mysql_week( $column ) {
+	switch ( $start_of_week = (int) get_option( 'start_of_week' ) ) {
+	default :
+	case 0 :
+		return "WEEK( $column, 0 )";
+	case 1 :
+		return "WEEK( $column, 1 )";
+	case 2 :
+	case 3 :
+	case 4 :
+	case 5 :
+	case 6 :
+		return "WEEK( DATE_SUB( $column, INTERVAL $start_of_week DAY ), 0 )";
+	}
+}
+
+/**
+ * Finds hierarchy loops using a callback function that maps object IDs to parent IDs.
+ *
+ * @since 3.1.0
+ * @access private
+ *
+ * @param callback $callback function that accepts ( ID, $callback_args ) and outputs parent_ID
+ * @param int $start The ID to start the loop check at
+ * @param int $start_parent the parent_ID of $start to use instead of calling $callback( $start ). Use null to always use $callback
+ * @param array $callback_args optional additional arguments to send to $callback
+ * @return array IDs of all members of loop
+ */
+function wp_find_hierarchy_loop( $callback, $start, $start_parent, $callback_args = array() ) {
+	$override = is_null( $start_parent ) ? array() : array( $start => $start_parent );
+
+	if ( !$arbitrary_loop_member = wp_find_hierarchy_loop_tortoise_hare( $callback, $start, $override, $callback_args ) )
+		return array();
+
+	return wp_find_hierarchy_loop_tortoise_hare( $callback, $arbitrary_loop_member, $override, $callback_args, true );
+}
+
+/**
+ * Uses the "The Tortoise and the Hare" algorithm to detect loops.
+ *
+ * For every step of the algorithm, the hare takes two steps and the tortoise one.
+ * If the hare ever laps the tortoise, there must be a loop.
+ *
+ * @since 3.1.0
+ * @access private
+ *
+ * @param callback $callback function that accupts ( ID, callback_arg, ... ) and outputs parent_ID
+ * @param int $start The ID to start the loop check at
+ * @param array $override an array of ( ID => parent_ID, ... ) to use instead of $callback
+ * @param array $callback_args optional additional arguments to send to $callback
+ * @param bool $_return_loop Return loop members or just detect presence of loop?
+ *             Only set to true if you already know the given $start is part of a loop
+ *             (otherwise the returned array might include branches)
+ * @return mixed scalar ID of some arbitrary member of the loop, or array of IDs of all members of loop if $_return_loop
+ */
+function wp_find_hierarchy_loop_tortoise_hare( $callback, $start, $override = array(), $callback_args = array(), $_return_loop = false ) {
+	$tortoise = $hare = $evanescent_hare = $start;
+	$return = array();
+
+	// Set evanescent_hare to one past hare
+	// Increment hare two steps
+	while (
+		$tortoise
+	&&
+		( $evanescent_hare = isset( $override[$hare] ) ? $override[$hare] : call_user_func_array( $callback, array_merge( array( $hare ), $callback_args ) ) )
+	&&
+		( $hare = isset( $override[$evanescent_hare] ) ? $override[$evanescent_hare] : call_user_func_array( $callback, array_merge( array( $evanescent_hare ), $callback_args ) ) )
+	) {
+		if ( $_return_loop )
+			$return[$tortoise] = $return[$evanescent_hare] = $return[$hare] = true;
+
+		// tortoise got lapped - must be a loop
+		if ( $tortoise == $evanescent_hare || $tortoise == $hare )
+			return $_return_loop ? $return : $tortoise;
+
+		// Increment tortoise by one step
+		$tortoise = isset( $override[$tortoise] ) ? $override[$tortoise] : call_user_func_array( $callback, array_merge( array( $tortoise ), $callback_args ) );
+	}
+
+	return false;
+}
+
+/**
+ * Send a HTTP header to limit rendering of pages to same origin iframes.
+ *
+ * @link https://developer.mozilla.org/en/the_x-frame-options_response_header
+ *
+ * @since 3.1.3
+ * @return none
+ */
+function send_frame_options_header() {
+	@header( 'X-Frame-Options: SAMEORIGIN' );
+}
+
+?>
